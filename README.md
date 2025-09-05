@@ -38,7 +38,7 @@ Instrucciones para la configuracion del proyecto
 ### 1. Instalar dependencias
 
 ```bash
-cd backend
+cd 2025_proyecto1_back_imc/
 npm install
 # o
 yarn install
@@ -63,7 +63,7 @@ yarn test
 ## Despliegue
 ### 1. Construimos el backend
 ```bash
-cd backend
+cd 2025_proyecto1_back_imc/ 
 npm run build
 # o
 yarn build

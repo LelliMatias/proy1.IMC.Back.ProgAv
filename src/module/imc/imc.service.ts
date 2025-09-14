@@ -49,19 +49,23 @@ export class ImcService {
     fechaInicio?: Date,
     fechaFin?: Date,
   ): Promise<ImcResult[]> {
-    const queryBuilder = this.imcRepository
-      .createQueryBuilder('imc')
-      .orderBy('imc.fechaHora', 'DESC');
+    const queryBuilder = this.imcRepository.createQueryBuilder('imc')
+      // ordenar por la propiedad existente en la entidad (según tu log: createdAt)
+      .orderBy('imc.createdAt', 'DESC');
 
-    // Filtro opcional por fechas
+    // Filtros posibles: ambos, sólo inicio, sólo fin
     if (fechaInicio && fechaFin) {
-      queryBuilder.where('imc.fechaHora BETWEEN :fechaInicio AND :fechaFin', {
-        fechaInicio,
-        fechaFin,
+      queryBuilder.where('imc.createdAt BETWEEN :start AND :end', {
+        start: fechaInicio,
+        end: fechaFin,
       });
+    } else if (fechaInicio) {
+      queryBuilder.where('imc.createdAt >= :start', { start: fechaInicio });
+    } else if (fechaFin) {
+      queryBuilder.where('imc.createdAt <= :end', { end: fechaFin });
     }
 
-    return queryBuilder.getMany();
+    return await queryBuilder.getMany();
   }
 
   // async obtenerEstadisticas() {

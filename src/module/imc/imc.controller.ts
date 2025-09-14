@@ -1,4 +1,4 @@
-import { Controller, Post, Body, ValidationPipe, Query, Get } from '@nestjs/common';
+import { Controller, Post, Body, ValidationPipe, Query, Get, BadRequestException } from '@nestjs/common';
 import { ImcService } from './imc.service';
 import { CalcularImcDto } from './dto/calcular-imc-dto';
 import { IsDateString, IsOptional } from 'class-validator';
@@ -26,9 +26,27 @@ export class ImcController {
   async obtenerHistorial(@Query(ValidationPipe) filtros: FiltroHistorialDto) {
     const { fechaInicio, fechaFin } = filtros;
 
-    const fechaInicioDate = fechaInicio ? new Date(fechaInicio) : undefined;
-    const fechaFinDate = fechaFin ? new Date(fechaFin) : undefined;
+    let fechaInicioDate: Date | undefined = undefined;
+    let fechaFinDate: Date | undefined = undefined;
 
-    return await this.imcService.obtenerHistorial(fechaInicioDate, fechaFinDate)
+    if (fechaInicio) {
+      fechaInicioDate = new Date(fechaInicio);
+      if (isNaN(fechaInicioDate.getTime())) {
+        throw new BadRequestException('fechaInicio inválida. Usar formato ISO (ej: 2025-09-01 o 2025-09-01T00:00:00Z).');
+      }
+    }
+
+    if (fechaFin) {
+      fechaFinDate = new Date(fechaFin);
+      if (isNaN(fechaFinDate.getTime())) {
+        throw new BadRequestException('fechaFin inválida. Usar formato ISO (ej: 2025-09-10 o 2025-09-10T23:59:59Z).');
+      }
+    }
+
+    if (fechaInicioDate && fechaFinDate && fechaInicioDate.getTime() > fechaFinDate.getTime()) {
+      throw new BadRequestException('fechaInicio no puede ser posterior a fechaFin.');
+    }
+
+    return await this.imcService.obtenerHistorial(fechaInicioDate, fechaFinDate);
   }
 }

@@ -7,7 +7,7 @@ import { ImcResult } from './module/imc/imc.entity'; // tu entidad
 
 @Module({
   imports: [
-    PRODUCCION
+    //PRODUCCION
     TypeOrmModule.forRoot({
        type: 'mysql',
        url: process.env.DATABASE_URL,

@@ -45,6 +45,28 @@ export class ImcService {
     return { imc: imcRedondeado, categoria };
   }
 
+  // async obtenerHistorial(
+  //   fechaInicio?: Date,
+  //   fechaFin?: Date,
+  // ): Promise<ImcResult[]> {
+  //   const queryBuilder = this.imcRepository.createQueryBuilder('imc')
+  //     // ordenar por la propiedad existente en la entidad (según tu log: createdAt)
+  //     .orderBy('imc.createdAt', 'DESC');
+
+  //   // Filtros posibles: ambos, sólo inicio, sólo fin
+  //   if (fechaInicio && fechaFin) {
+  //     queryBuilder.where('imc.createdAt BETWEEN :start AND :end', {
+  //       start: fechaInicio,
+  //       end: fechaFin,
+  //     });
+  //   } else if (fechaInicio) {
+  //     queryBuilder.where('imc.createdAt >= :start', { start: fechaInicio });
+  //   } else if (fechaFin) {
+  //     queryBuilder.where('imc.createdAt <= :end', { end: fechaFin });
+  //   }
+
+  //   return await queryBuilder.getMany();
+  // }
   async obtenerHistorial(
     fechaInicio?: Date,
     fechaFin?: Date,
@@ -55,18 +77,26 @@ export class ImcService {
 
     // Filtros posibles: ambos, sólo inicio, sólo fin
     if (fechaInicio && fechaFin) {
-      queryBuilder.where('imc.createdAt BETWEEN :start AND :end', {
-        start: fechaInicio,
-        end: fechaFin,
-      });
+      const startStr = fechaInicio.toISOString().split('T')[0]; // "2025-09-14"
+      const endStr = fechaFin.toISOString().split('T')[0];       // "2025-09-14" o "2025-09-15"
+
+      queryBuilder.where(
+        'DATE(imc.createdAt) BETWEEN :start AND :end',
+        { start: startStr, end: endStr },
+      );
     } else if (fechaInicio) {
-      queryBuilder.where('imc.createdAt >= :start', { start: fechaInicio });
+      const startStr = fechaInicio.toISOString().split('T')[0];
+      queryBuilder.where('DATE(imc.createdAt) >= :start', { start: startStr });
     } else if (fechaFin) {
-      queryBuilder.where('imc.createdAt <= :end', { end: fechaFin });
+      const endStr = fechaFin.toISOString().split('T')[0];
+      queryBuilder.where('DATE(imc.createdAt) <= :end', { end: endStr });
     }
+
+
 
     return await queryBuilder.getMany();
   }
+
 
   // async obtenerEstadisticas() {
   //   const total = await this.imcRepository.count();

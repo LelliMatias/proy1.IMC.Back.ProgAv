@@ -9,10 +9,13 @@ import { ImcResult } from './module/imc/imc.entity'; // tu entidad
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      url: process.env.DATABASE_URL, // Railway URL completa
-      autoLoadEntities: true, // carga automáticamente las entidades
-      synchronize: false,    // siempre false en producción
+      url: process.env.DATABASE_URL,
+      autoLoadEntities: true,
+      synchronize: false,
+      retryAttempts: 10,
+      retryDelay: 3000, // 3 segundos
     }),
+
     ImcModule, // tu módulo feature
   ],
   controllers: [AppController],

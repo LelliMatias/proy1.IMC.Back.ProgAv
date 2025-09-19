@@ -34,7 +34,7 @@ describe('IMC E2E (con BD real en memoria)', () => {
         const dto = { peso: 70, altura: 1.75 };
 
         const res = await request(app.getHttpServer())
-            .post('/imc/calcular')   // ✅ esta es la ruta real
+            .post('/imc/calcular')
             .send(dto)
             .expect(201);
 

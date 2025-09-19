@@ -15,7 +15,7 @@ export interface ImcResponse {
 export class ImcService {
   constructor(
     @InjectRepository(ImcResult)
-    private imcRepository: Repository<ImcResult>
+    private readonly imcRepo: Repository<ImcResult>,
   ) { }
 
   async calcularImc(data: CalcularImcDto): Promise<{ imc: number; categoria: string; }> {
@@ -34,51 +34,28 @@ export class ImcService {
       categoria = 'Obeso';
     }
 
-    const result = this.imcRepository.create({
+    const result = this.imcRepo.create({
       peso,
       altura,
       imc: imcRedondeado,
       categoria
     });
-    const saveResult = await this.imcRepository.save(result);
+    const saveResult = await this.imcRepo.save(result);
 
     return { imc: imcRedondeado, categoria };
   }
 
-  // async obtenerHistorial(
-  //   fechaInicio?: Date,
-  //   fechaFin?: Date,
-  // ): Promise<ImcResult[]> {
-  //   const queryBuilder = this.imcRepository.createQueryBuilder('imc')
-  //     // ordenar por la propiedad existente en la entidad (según tu log: createdAt)
-  //     .orderBy('imc.createdAt', 'DESC');
-
-  //   // Filtros posibles: ambos, sólo inicio, sólo fin
-  //   if (fechaInicio && fechaFin) {
-  //     queryBuilder.where('imc.createdAt BETWEEN :start AND :end', {
-  //       start: fechaInicio,
-  //       end: fechaFin,
-  //     });
-  //   } else if (fechaInicio) {
-  //     queryBuilder.where('imc.createdAt >= :start', { start: fechaInicio });
-  //   } else if (fechaFin) {
-  //     queryBuilder.where('imc.createdAt <= :end', { end: fechaFin });
-  //   }
-
-  //   return await queryBuilder.getMany();
-  // }
   async obtenerHistorial(
     fechaInicio?: Date,
     fechaFin?: Date,
   ): Promise<ImcResult[]> {
-    const queryBuilder = this.imcRepository.createQueryBuilder('imc')
-      // ordenar por la propiedad existente en la entidad (según tu log: createdAt)
+    const queryBuilder = this.imcRepo.createQueryBuilder('imc')
       .orderBy('imc.createdAt', 'DESC');
 
-    // Filtros posibles: ambos, sólo inicio, sólo fin
+    // Filtros
     if (fechaInicio && fechaFin) {
-      const startStr = fechaInicio.toISOString().split('T')[0]; // "2025-09-14"
-      const endStr = fechaFin.toISOString().split('T')[0];       // "2025-09-14" o "2025-09-15"
+      const startStr = fechaInicio.toISOString().split('T')[0];
+      const endStr = fechaFin.toISOString().split('T')[0];
 
       queryBuilder.where(
         'DATE(imc.createdAt) BETWEEN :start AND :end',

@@ -5,8 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ImcResult } from './imc.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ImcResult])], // solo las entidades del módulo
+  imports: [TypeOrmModule.forFeature([ImcResult])],
   controllers: [ImcController],
   providers: [ImcService],
+  exports: [ImcService],
 })
 export class ImcModule { }

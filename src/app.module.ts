@@ -7,27 +7,30 @@ import { ImcResult } from './module/imc/imc.entity'; // tu entidad
 
 @Module({
   imports: [
-    //PRODUCCION
-    // TypeOrmModule.forRoot({
-    //   type: 'mysql',
-    //   url: process.env.DATABASE_URL,
-    //   autoLoadEntities: true,
-    //   synchronize: false,
-    //   retryAttempts: 10,
-    //   retryDelay: 3000, // 3 segundos
-    // }),
-    //DESARROLLO
+    // PRODUCCION (mantener comentado en dev)
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: 'root',
-      database: 'imcdb',
-      entities: [ImcResult],
+      url: process.env.DATABASE_URL,
+      autoLoadEntities: true,
+      synchronize: false,
+      retryAttempts: 10,
+      retryDelay: 3000,
     }),
 
-    ImcModule // tu módulo feature
+    // DESARROLLO
+    // TypeOrmModule.forRoot({
+    //   type: 'mysql',
+    //   host: process.env.DB_HOST || 'localhost',
+    //   port: Number(process.env.DB_PORT) || 3306,
+    //   username: process.env.DB_USER || 'root',
+    //   password: process.env.DB_PASS || 'root',
+    //   database: process.env.DB_NAME || 'imcdb',
+    //   entities: [ImcResult],
+    //   synchronize: true, // solo en dev
+    //   logging: true,
+    // }),
+
+    ImcModule,
   ],
   controllers: [AppController],
   providers: [AppService],

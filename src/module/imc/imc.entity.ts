@@ -11,13 +11,17 @@ export class ImcResult {
     @Column({ type: 'decimal', precision: 4, scale: 2 })
     altura: number;
 
-    @Column({ type: 'decimal', precision: 5, scale: 2 })
+    @Column({ type: 'decimal', precision: 7, scale: 2 })
     imc: number;
 
     @Column({ type: 'varchar', length: 32 })
     categoria: string;
 
-    @CreateDateColumn({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+    @CreateDateColumn({
+        type: 'timestamp',
+        precision: 0, // explícito: SIN microsegundos
+        default: () => 'CURRENT_TIMESTAMP',
+    })
     createdAt: Date;
 
 }

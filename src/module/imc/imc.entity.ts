@@ -17,11 +17,8 @@ export class ImcResult {
     @Column({ type: 'varchar', length: 32 })
     categoria: string;
 
-    @CreateDateColumn({
-        type: 'timestamp',
-        precision: 0, // explícito: SIN microsegundos
-        default: () => 'CURRENT_TIMESTAMP',
-    })
+
+    @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
 
 }

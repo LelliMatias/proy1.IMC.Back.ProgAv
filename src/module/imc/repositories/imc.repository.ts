@@ -1,38 +1,47 @@
+// src/imc/imc.repository.ts
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ImcResult } from '../imc.entity';
-import { AppDataSource } from '../../../data-source';
-import { IImcRepository } from './interface-imc.repository';
+import { IImcRepository } from '../repositories/interface-imc.repository';
 
+@Injectable()
 export class ImcRepository implements IImcRepository {
-    private repo: Repository<ImcResult>;
+    constructor(
+        @InjectRepository(ImcResult)
+        private readonly repo: Repository<ImcResult>,
+    ) { }
 
-    constructor() {
-        // Asegurarse que AppDataSource está inicializado antes de usar
-        if (!AppDataSource.isInitialized) {
-            throw new Error('AppDataSource no inicializado. Llama a initializeDataSource() en bootstrap.');
+    create(payload: Partial<ImcResult>): ImcResult {
+        return this.repo.create(payload);
+    }
+
+    save(entity: ImcResult): Promise<ImcResult> {
+        return this.repo.save(entity);
+    }
+
+    findAllOrderedDesc(): Promise<ImcResult[]> {
+        return this.repo.createQueryBuilder('imc')
+            .orderBy('imc.createdAt', 'DESC')
+            .getMany();
+    }
+
+    async findByDateRange(fechaInicio?: Date, fechaFin?: Date): Promise<ImcResult[]> {
+        const qb = this.repo.createQueryBuilder('imc')
+            .orderBy('imc.createdAt', 'DESC');
+
+        if (fechaInicio && fechaFin) {
+            const startStr = fechaInicio.toISOString().split('T')[0];
+            const endStr = fechaFin.toISOString().split('T')[0];
+            qb.where('DATE(imc.createdAt) BETWEEN :start AND :end', { start: startStr, end: endStr });
+        } else if (fechaInicio) {
+            const startStr = fechaInicio.toISOString().split('T')[0];
+            qb.where('DATE(imc.createdAt) >= :start', { start: startStr });
+        } else if (fechaFin) {
+            const endStr = fechaFin.toISOString().split('T')[0];
+            qb.where('DATE(imc.createdAt) <= :end', { end: endStr });
         }
-        this.repo = AppDataSource.getRepository(ImcResult);
-    }
 
-    async save(imc: Partial<ImcResult>): Promise<ImcResult> {
-        const ent = this.repo.create(imc);
-        return await this.repo.save(ent);
-    }
-
-    async findById(id: number): Promise<ImcResult | null> {
-        return (await this.repo.findOne({ where: { id } })) ?? null;
-    }
-
-    async findAllBetweenDates(start?: Date, end?: Date): Promise<ImcResult[]> {
-        const qb = this.repo.createQueryBuilder('r').orderBy('r.createdAt', 'DESC');
-
-        if (start) qb.andWhere('r.createdAt >= :start', { start: start.toISOString() });
-        if (end) qb.andWhere('r.createdAt <= :end', { end: end.toISOString() });
-
-        return await qb.getMany();
-    }
-
-    async deleteById(id: number): Promise<void> {
-        await this.repo.delete(id);
+        return qb.getMany();
     }
 }

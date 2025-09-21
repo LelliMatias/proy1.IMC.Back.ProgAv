@@ -18,13 +18,23 @@ import { ImcResult } from './module/imc/imc.entity'; // tu entidad
     // }),
     // DESARROLLO
     TypeOrmModule.forRoot({
-      type: 'mysql',
+      /*type: 'mysql',
       host: 'localhost',
       port: 3306,
       username: 'root',
       password: 'root',
       database: 'imcdb',
-      entities: [ImcResult],
+      entities: [ImcResult],*/
+      
+      // POSTGRES
+      type: 'postgres',
+        host: 'localhost',
+        port: 5432,
+        username: 'postgres',
+        password: 'postgres',
+        database: 'imcdbpostgres',
+        entities: [ImcResult],
+        synchronize: true
     }),
 
     ImcModule // tu módulo feature

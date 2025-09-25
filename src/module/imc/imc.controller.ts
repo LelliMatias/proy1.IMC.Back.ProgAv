@@ -18,8 +18,23 @@ export class ImcController {
   constructor(private readonly imcService: ImcService) { }
 
   @Post('calcular')
+
   async calcular(@Body(ValidationPipe) data: CalcularImcDto) {
     return await this.imcService.calcularImc(data);
+  }
+
+  @Post('test-create')
+  async testCreate() {
+    const testData = { peso: 70, altura: 1.75 }; // datos de prueba
+    const result = await this.imcService.calcularImc(testData);
+    return { ok: true, data: result };
+  }
+
+  // Endpoint de prueba para leer todos los registros
+  @Get('test-list')
+  async testList() {
+    const data = await this.imcService.obtenerHistorial();
+    return { ok: true, count: data.length, data };
   }
 
   @Get('historial')

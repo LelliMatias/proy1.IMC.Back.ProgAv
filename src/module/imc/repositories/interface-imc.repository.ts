@@ -1,5 +1,5 @@
-// src/imc/imc-repository.interface.ts
-import { ImcResult } from '../imc.entity';
+// src/imc/repositories/imc-repository.interface.ts
+import { ImcResult } from '../imc.schema';
 
 export interface IImcRepository {
     create(payload: Partial<ImcResult>): ImcResult;

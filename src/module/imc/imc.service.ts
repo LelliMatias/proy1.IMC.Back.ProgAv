@@ -1,8 +1,9 @@
 // src/imc/imc.service.ts
-import { Inject, Injectable } from "@nestjs/common";
-import { CalcularImcDto } from "./dto/calcular-imc-dto";
-import { ImcResult } from "./imc.entity";
-import { IImcRepository } from "../imc/repositories/interface-imc.repository";
+// src/imc/imc.service.ts
+import { Inject, Injectable } from '@nestjs/common';
+import { CalcularImcDto } from './dto/calcular-imc-dto';
+import { ImcResult } from './imc.schema';
+import { IImcRepository } from './repositories/interface-imc.repository';
 
 @Injectable()
 export class ImcService {
@@ -11,7 +12,7 @@ export class ImcService {
     private readonly imcRepo: IImcRepository,
   ) { }
 
-  async calcularImc(data: CalcularImcDto): Promise<{ imc: number; categoria: string; }> {
+  async calcularImc(data: CalcularImcDto): Promise<{ imc: number; categoria: string }> {
     const { altura, peso } = data;
     const imc = peso / (altura * altura);
     const imcRedondeado = Math.round(imc * 100) / 100;
@@ -35,7 +36,6 @@ export class ImcService {
     return this.imcRepo.findAllOrderedDesc();
   }
 }
-
 
 
 // async obtenerEstadisticas() {

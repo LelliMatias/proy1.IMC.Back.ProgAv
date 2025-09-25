@@ -1,47 +1,40 @@
-// src/imc/imc.repository.ts
+// src/imc/repositories/imc.repository.ts
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ImcResult } from '../imc.entity';
-import { IImcRepository } from '../repositories/interface-imc.repository';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ImcResult } from '../imc.schema';
+import { IImcRepository } from './interface-imc.repository';
 
 @Injectable()
 export class ImcRepository implements IImcRepository {
     constructor(
-        @InjectRepository(ImcResult)
-        private readonly repo: Repository<ImcResult>,
+        @InjectModel(ImcResult.name) private readonly imcModel: Model<ImcResult>,
     ) { }
 
     create(payload: Partial<ImcResult>): ImcResult {
-        return this.repo.create(payload);
+        return new this.imcModel(payload);
     }
 
     save(entity: ImcResult): Promise<ImcResult> {
-        return this.repo.save(entity);
+        return entity.save();
     }
 
-    findAllOrderedDesc(): Promise<ImcResult[]> {
-        return this.repo.createQueryBuilder('imc')
-            .orderBy('imc.createdAt', 'DESC')
-            .getMany();
+    async findAllOrderedDesc(): Promise<ImcResult[]> {
+        return this.imcModel.find().sort({ createdAt: -1 }).exec();
     }
 
     async findByDateRange(fechaInicio?: Date, fechaFin?: Date): Promise<ImcResult[]> {
-        const qb = this.repo.createQueryBuilder('imc')
-            .orderBy('imc.createdAt', 'DESC');
+        const filter: any = {};
 
         if (fechaInicio && fechaFin) {
-            const startStr = fechaInicio.toISOString().split('T')[0];
-            const endStr = fechaFin.toISOString().split('T')[0];
-            qb.where('DATE(imc.createdAt) BETWEEN :start AND :end', { start: startStr, end: endStr });
+            filter.createdAt = { $gte: fechaInicio, $lte: fechaFin };
         } else if (fechaInicio) {
-            const startStr = fechaInicio.toISOString().split('T')[0];
-            qb.where('DATE(imc.createdAt) >= :start', { start: startStr });
+            filter.createdAt = { $gte: fechaInicio };
         } else if (fechaFin) {
-            const endStr = fechaFin.toISOString().split('T')[0];
-            qb.where('DATE(imc.createdAt) <= :end', { end: endStr });
+            filter.createdAt = { $lte: fechaFin };
         }
 
-        return qb.getMany();
+        return this.imcModel.find(filter).sort({ createdAt: -1 }).exec();
     }
+
 }

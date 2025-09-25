@@ -1,33 +1,22 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ImcModule } from './module/imc/imc.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ImcResult } from './module/imc/imc.entity'; // tu entidad
-
+import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
-    // PRODUCCION
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      url: process.env.DATABASE_URL,
-      autoLoadEntities: true,
-      synchronize: false,
-      retryAttempts: 10,
-      retryDelay: 3000,
+    ConfigModule.forRoot({
+      isGlobal: true, // para que esté disponible en todos los módulos
     }),
-    // DESARROLLO
-    // TypeOrmModule.forRoot({
-    //   type: 'mysql',
-    //   host: 'localhost',
-    //   port: 3306,
-    //   username: 'root',
-    //   password: 'root',
-    //   database: 'imcdb',
-    //   entities: [ImcResult],
-    // }),
-
-    ImcModule 
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get<string>('MONGO_URI'),
+      }),
+    }),
+    ImcModule
   ],
   controllers: [AppController],
   providers: [AppService],

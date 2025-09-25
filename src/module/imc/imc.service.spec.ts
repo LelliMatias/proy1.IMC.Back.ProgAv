@@ -1,9 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImcService } from "./imc.service";
 import { CalcularImcDto } from "./dto/calcular-imc-dto";
-import { ImcResult } from "./imc.entity";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
 
 describe('ImcService', () => {
   let service: ImcService;

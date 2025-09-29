@@ -64,4 +64,17 @@ export class ImcController {
 
     return await this.imcService.obtenerHistorial(fechaInicioDate, fechaFinDate);
   }
+
+  @Get('estadisticas')
+  async obtenerEstadisticas(@Query(ValidationPipe) filtros: FiltroHistorialDto) {
+    const { fechaInicio, fechaFin } = filtros;
+
+    let fechaInicioDate: Date | undefined;
+    let fechaFinDate: Date | undefined;
+
+    if (fechaInicio) fechaInicioDate = new Date(fechaInicio);
+    if (fechaFin) fechaFinDate = new Date(fechaFin);
+
+    return await this.imcService.obtenerEstadisticas(fechaInicioDate, fechaFinDate);
+  }
 }

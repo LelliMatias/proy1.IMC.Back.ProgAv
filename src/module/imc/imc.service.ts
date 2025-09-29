@@ -35,27 +35,41 @@ export class ImcService {
     }
     return this.imcRepo.findAllOrderedDesc();
   }
+
+  async obtenerEstadisticas(fechaInicio?: Date, fechaFin?: Date) {
+    const agg = await this.imcRepo.aggregateStats(fechaInicio, fechaFin);
+    const distribucion = await this.imcRepo.distribucionPorCategoria(fechaInicio, fechaFin);
+    const series = await this.imcRepo.timeSeries(fechaInicio, fechaFin, undefined, 'day');
+
+    if (!agg) {
+      return {
+        total: 0,
+        promedioImc: null,
+        varianzaImc: null,
+        minImc: null,
+        maxImc: null,
+        distribucionCategorias: [],
+        series,
+      };
+    }
+
+    const avgImc: number | null = agg.avgImc ?? null;
+    const avgImcSq: number | null = agg.avgImcSq ?? null;
+
+    let varianzaImc: number | null = null;
+    if (avgImc != null && avgImcSq != null) {
+      varianzaImc = Math.round((avgImcSq - avgImc * avgImc) * 100) / 100;
+    }
+
+    return {
+      total: agg.count ?? 0,
+      promedioImc: avgImc != null ? Math.round(avgImc * 100) / 100 : null,
+      varianzaImc,
+      minImc: agg.minImc ?? null,
+      maxImc: agg.maxImc ?? null,
+      distribucionCategorias: distribucion,
+      series,
+    };
+  }
+
 }
-
-
-// async obtenerEstadisticas() {
-//   const total = await this.imcRepository.count();
-//   const promedioImc = await this.imcRepository
-//     .createQueryBuilder('imc')
-//     .select('AVG(imc.imc)', 'promedio')
-//     .getRawOne();
-
-//   const categorias = await this.imcRepository
-//     .createQueryBuilder('imc')
-//     .select('imc.categoria', 'categoria')
-//     .addSelect('COUNT(*)', 'cantidad')
-//     .groupBy('imc.categoria')
-//     .getRawMany();
-
-//   return {
-//     total,
-//     promedioImc: Math.round(promedioImc.promedio * 100) / 100,
-//     distribucionCategorias: categorias,
-//   };
-// }
-

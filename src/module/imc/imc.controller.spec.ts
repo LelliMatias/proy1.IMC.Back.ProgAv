@@ -4,97 +4,145 @@ import { ImcService } from './imc.service';
 import { CalcularImcDto } from './dto/calcular-imc-dto';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
-describe('ImcController', () => {
+describe('ImcController (refactor)', () => {
   let controller: ImcController;
-  let service: ImcService;
+  let serviceMock: {
+    calcularImc: jest.Mock;
+    obtenerHistorial: jest.Mock;
+    obtenerEstadisticas: jest.Mock;
+  };
 
   beforeEach(async () => {
+    serviceMock = {
+      calcularImc: jest.fn(),
+      obtenerHistorial: jest.fn(),
+      obtenerEstadisticas: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ImcController],
-      providers: [
-        {
-          provide: ImcService,
-          useValue: {
-            calcularImc: jest.fn(),
-            obtenerHistorial: jest.fn(),
-          },
-        },
-      ],
+      providers: [{ provide: ImcService, useValue: serviceMock }],
     }).compile();
 
     controller = module.get<ImcController>(ImcController);
-    service = module.get<ImcService>(ImcService);
+    jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it('controller should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should return IMC and category for valid input', async () => {
+  it('calcular -> debe devolver IMC y categoria para input valido', async () => {
     const dto: CalcularImcDto = { altura: 1.75, peso: 70 };
-    jest.spyOn(service, 'calcularImc').mockResolvedValue({ imc: 22.86, categoria: 'Normal' });
+    const expected = { imc: 22.86, categoria: 'Normal' };
+    serviceMock.calcularImc.mockResolvedValue(expected);
 
-    const result = await controller.calcular(dto);
-    expect(result).toEqual({ imc: 22.86, categoria: 'Normal' });
-    expect(service.calcularImc).toHaveBeenCalledWith(dto);
+    const res = await controller.calcular(dto);
+
+    expect(serviceMock.calcularImc).toHaveBeenCalledWith(dto);
+    expect(res).toEqual(expected);
   });
 
-  it('should throw BadRequestException for invalid input', async () => {
-    const invalidDto: CalcularImcDto = { altura: -1, peso: 70 };
-
-    const validationPipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true });
-
-    await expect(
-      validationPipe.transform(invalidDto, { type: 'body', metatype: CalcularImcDto }),
-    ).rejects.toThrow(BadRequestException);
-
-    expect(service.calcularImc).not.toHaveBeenCalled();
-  });
-
-  it('should return historial ordered by date', async () => {
-    const mockHistorial = [
-      { id: 2, peso: 80, altura: 1.8, imc: 24.69, categoria: 'Normal', createdAt: '2025-09-14T12:00:00Z' },
-      { id: 1, peso: 60, altura: 1.6, imc: 23.44, categoria: 'Normal', createdAt: '2025-09-13T12:00:00Z' },
-    ];
-    (service.obtenerHistorial as jest.Mock).mockResolvedValue(mockHistorial);
-
-    const result = await controller.obtenerHistorial({});
-    expect(service.obtenerHistorial).toHaveBeenCalled();
-    expect(result).toEqual(mockHistorial);
-    expect(new Date(result[0].createdAt).getTime()).toBeGreaterThan(
-      new Date(result[1].createdAt).getTime(),
-    );
-  });
-
-  it('should pass date filters to service when provided', async () => {
-    const mockHistorial = [];
-    (service.obtenerHistorial as jest.Mock).mockResolvedValue(mockHistorial);
-
-    const query = { fechaInicio: '2025-09-01', fechaFin: '2025-09-30' };
-    await controller.obtenerHistorial(query);
-
-    expect(service.obtenerHistorial).toHaveBeenCalledWith(
-      new Date(query.fechaInicio),
-      new Date(query.fechaFin),
-    );
-  });
-
-  // 🔹 Nuevo test: historial vacío
-  it('should return empty array when no historial found', async () => {
-    (service.obtenerHistorial as jest.Mock).mockResolvedValue([]);
-
-    const result = await controller.obtenerHistorial({});
-    expect(result).toEqual([]);
-  });
-
-  // 🔹 Nuevo test: service error propagates
-  it('should throw if service throws an error', async () => {
-    (service.calcularImc as jest.Mock).mockImplementation(() => {
+  it('calcular -> si el service tira error, debe propagarse', async () => {
+    serviceMock.calcularImc.mockImplementation(() => {
       throw new Error('DB error');
     });
 
     const dto: CalcularImcDto = { altura: 1.75, peso: 70 };
 
     await expect(controller.calcular(dto)).rejects.toThrow('DB error');
+    expect(serviceMock.calcularImc).toHaveBeenCalledWith(dto);
+  });
+
+  it('calcular -> ValidationPipe rechaza DTO inválido (altura negativa)', async () => {
+    const invalidDto: CalcularImcDto = { altura: -1, peso: 70 };
+    const validationPipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true });
+
+    await expect(
+      validationPipe.transform(invalidDto, { type: 'body', metatype: CalcularImcDto }),
+    ).rejects.toThrow(BadRequestException);
+
+    // no se llamó al service porque la validación debería bloquear antes
+    expect(serviceMock.calcularImc).not.toHaveBeenCalled();
+  });
+
+  it('testCreate -> debe llamar a service.calcularImc y envolver respuesta', async () => {
+    const resultFromService = { imc: 22.86, categoria: 'Normal' };
+    serviceMock.calcularImc.mockResolvedValue(resultFromService);
+
+    const res = await controller.testCreate();
+
+    expect(serviceMock.calcularImc).toHaveBeenCalledWith({ peso: 70, altura: 1.75 });
+    expect(res).toEqual({ ok: true, data: resultFromService });
+  });
+
+  it('testList -> debe devolver ok, count y data', async () => {
+    const data = [
+      { peso: 70, altura: 1.75, imc: 22.86, createdAt: '2025-09-14T12:00:00Z' },
+      { peso: 60, altura: 1.6, imc: 23.44, createdAt: '2025-09-13T12:00:00Z' },
+    ];
+    serviceMock.obtenerHistorial.mockResolvedValue(data);
+
+    const res = await controller.testList();
+
+    expect(serviceMock.obtenerHistorial).toHaveBeenCalled();
+    expect(res).toEqual({ ok: true, count: data.length, data });
+  });
+
+  it('obtenerHistorial -> sin filtros debe llamar service.obtenerHistorial(undefined, undefined)', async () => {
+    const mockHistorial = [{ imc: 22 }];
+    serviceMock.obtenerHistorial.mockResolvedValue(mockHistorial);
+
+    const res = await controller.obtenerHistorial({});
+
+    expect(serviceMock.obtenerHistorial).toHaveBeenCalledWith(undefined, undefined);
+    expect(res).toEqual(mockHistorial);
+  });
+
+  it('obtenerHistorial -> con filtros válidos debe parsear fechas y pasarlas al service', async () => {
+    const mockHistorial: any[] = [];
+    serviceMock.obtenerHistorial.mockResolvedValue(mockHistorial);
+
+    const query = { fechaInicio: '2025-09-01', fechaFin: '2025-09-30' };
+    await controller.obtenerHistorial(query);
+
+    expect(serviceMock.obtenerHistorial).toHaveBeenCalledWith(
+      new Date(query.fechaInicio),
+      new Date(query.fechaFin),
+    );
+  });
+
+  it('obtenerHistorial -> fechaInicio inválida debe lanzar BadRequestException', async () => {
+    const badQuery = { fechaInicio: 'no-es-una-fecha' };
+
+    await expect(controller.obtenerHistorial(badQuery)).rejects.toThrow(BadRequestException);
+    expect(serviceMock.obtenerHistorial).not.toHaveBeenCalled();
+  });
+
+  it('obtenerHistorial -> fechaInicio posterior a fechaFin debe lanzar BadRequestException', async () => {
+    const badQuery = { fechaInicio: '2025-10-01', fechaFin: '2025-09-01' };
+
+    await expect(controller.obtenerHistorial(badQuery)).rejects.toThrow(BadRequestException);
+    expect(serviceMock.obtenerHistorial).not.toHaveBeenCalled();
+  });
+
+  it('obtenerHistorial -> cuando el service devuelve [], debe retornar []', async () => {
+    serviceMock.obtenerHistorial.mockResolvedValue([]);
+    const res = await controller.obtenerHistorial({});
+    expect(res).toEqual([]);
+  });
+
+  it('obtenerEstadisticas -> debe parsear filtros y llamar a service.obtenerEstadisticas', async () => {
+    const agg = { total: 10, promedioImc: 24.12 };
+    serviceMock.obtenerEstadisticas.mockResolvedValue(agg);
+
+    const query = { fechaInicio: '2025-09-01', fechaFin: '2025-09-30' };
+    const res = await controller.obtenerEstadisticas(query);
+
+    expect(serviceMock.obtenerEstadisticas).toHaveBeenCalledWith(
+      new Date(query.fechaInicio),
+      new Date(query.fechaFin),
+    );
+    expect(res).toEqual(agg);
   });
 });

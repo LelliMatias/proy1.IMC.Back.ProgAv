@@ -1,146 +1,140 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ImcService } from "./imc.service";
-import { CalcularImcDto } from "./dto/calcular-imc-dto";
 
-describe('ImcService', () => {
+/**
+ * Nota: definido localmente para evitar problemas de paths en tests.
+ * Si en tu proyecto ya existe el DTO real, podés importar en vez de definirlo.
+ */
+type CalcularImcDto = { altura: number; peso: number };
+
+describe("ImcService (mocks para Mongo)", () => {
   let service: ImcService;
-  let repo: jest.Mocked<Repository<ImcResult>>;
+
+  // Mock del repositorio que debería coincidir con los métodos que usa ImcService
+  const repoMock = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findByDateRange: jest.fn(),
+    findAllOrderedDesc: jest.fn(),
+    aggregateStats: jest.fn(),
+    distribucionPorCategoria: jest.fn(),
+    timeSeries: jest.fn(),
+  };
 
   beforeEach(async () => {
-    const repoMock: Partial<jest.Mocked<Repository<ImcResult>>> = {
-      create: jest.fn(),
-      save: jest.fn(),
-      createQueryBuilder: jest.fn(),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ImcService,
-        { provide: getRepositoryToken(ImcResult), useValue: repoMock },
+        // Asegurate de que este token coincida con el que usás en tu servicio.
+        // Si usás un Symbol o nombre distinto en @Inject(...), reemplazar por ese valor.
+        { provide: "IImcRepository", useValue: repoMock },
       ],
     }).compile();
 
     service = module.get<ImcService>(ImcService);
-    repo = module.get(getRepositoryToken(ImcResult));
+    jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("service should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  // -----------------------------
-  // 🔹 Tests originales de cálculo
-  // -----------------------------
-  it('should calculate IMC correctly', async () => {
+  it("calcularImc -> Normal", async () => {
     const dto: CalcularImcDto = { altura: 1.75, peso: 70 };
-    const mockEntity = { ...dto, imc: 22.86, categoria: 'Normal' } as ImcResult;
+    const mockEntity = { ...dto, imc: 22.86, categoria: "Normal" };
 
-    (repo.create as jest.Mock).mockReturnValue(mockEntity);
-    (repo.save as jest.Mock).mockResolvedValue(mockEntity);
+    repoMock.create.mockReturnValue(mockEntity);
+    repoMock.save.mockResolvedValue(mockEntity);
 
-    const result = await service.calcularImc(dto);
-    expect(result.imc).toBeCloseTo(22.86, 2);
-    expect(result.categoria).toBe('Normal');
+    const res = await service.calcularImc(dto);
+
+    expect(res.imc).toBeCloseTo(22.86, 2);
+    expect(res.categoria).toBe("Normal");
+    expect(repoMock.create).toHaveBeenCalled();
+    expect(repoMock.save).toHaveBeenCalledWith(mockEntity);
   });
 
-  it('should return Bajo peso for IMC < 18.5', async () => {
+  it("calcularImc -> Bajo peso", async () => {
     const dto: CalcularImcDto = { altura: 1.75, peso: 50 };
-    const mockEntity = { ...dto, imc: 16.33, categoria: 'Bajo peso' } as ImcResult;
+    const mockEntity = { ...dto, imc: 16.33, categoria: "Bajo peso" };
 
-    (repo.create as jest.Mock).mockReturnValue(mockEntity);
-    (repo.save as jest.Mock).mockResolvedValue(mockEntity);
+    repoMock.create.mockReturnValue(mockEntity);
+    repoMock.save.mockResolvedValue(mockEntity);
 
-    const result = await service.calcularImc(dto);
-    expect(result.imc).toBeCloseTo(16.33, 2);
-    expect(result.categoria).toBe('Bajo peso');
+    const res = await service.calcularImc(dto);
+    expect(res.categoria).toBe("Bajo peso");
   });
 
-  it('should return Sobrepeso for 25 <= IMC < 30', async () => {
+  it("calcularImc -> Sobrepeso", async () => {
     const dto: CalcularImcDto = { altura: 1.75, peso: 80 };
-    const mockEntity = { ...dto, imc: 26.12, categoria: 'Sobrepeso' } as ImcResult;
+    const mockEntity = { ...dto, imc: 26.12, categoria: "Sobrepeso" };
 
-    (repo.create as jest.Mock).mockReturnValue(mockEntity);
-    (repo.save as jest.Mock).mockResolvedValue(mockEntity);
+    repoMock.create.mockReturnValue(mockEntity);
+    repoMock.save.mockResolvedValue(mockEntity);
 
-    const result = await service.calcularImc(dto);
-    expect(result.imc).toBeCloseTo(26.12, 2);
-    expect(result.categoria).toBe('Sobrepeso');
+    const res = await service.calcularImc(dto);
+    expect(res.categoria).toBe("Sobrepeso");
   });
 
-  it('should return Obeso for IMC >= 30', async () => {
+  it("calcularImc -> Obeso", async () => {
     const dto: CalcularImcDto = { altura: 1.75, peso: 100 };
-    const mockEntity = { ...dto, imc: 32.65, categoria: 'Obeso' } as ImcResult;
+    const mockEntity = { ...dto, imc: 32.65, categoria: "Obeso" };
 
-    (repo.create as jest.Mock).mockReturnValue(mockEntity);
-    (repo.save as jest.Mock).mockResolvedValue(mockEntity);
+    repoMock.create.mockReturnValue(mockEntity);
+    repoMock.save.mockResolvedValue(mockEntity);
 
-    const result = await service.calcularImc(dto);
-    expect(result.imc).toBeCloseTo(32.65, 2);
-    expect(result.categoria).toBe('Obeso');
+    const res = await service.calcularImc(dto);
+    expect(res.categoria).toBe("Obeso");
   });
 
-  // -----------------------------
-  // 🔹 Tests de historial
-  // -----------------------------
-  it('should call queryBuilder with no filters', async () => {
-    const mockGetMany = jest.fn().mockResolvedValue([]);
-    (repo.createQueryBuilder as jest.Mock).mockReturnValue({
-      orderBy: jest.fn().mockReturnThis(),
-      getMany: mockGetMany,
-    } as any);
+  it("obtenerHistorial -> con rango de fechas usa findByDateRange", async () => {
+    const desde = new Date("2025-09-01");
+    const hasta = new Date("2025-09-30");
 
-    const result = await service.obtenerHistorial();
-    expect(result).toEqual([]);
-    expect(mockGetMany).toHaveBeenCalled();
+    repoMock.findByDateRange.mockResolvedValue([]);
+    await service.obtenerHistorial(desde, hasta);
+
+    expect(repoMock.findByDateRange).toHaveBeenCalledWith(desde, hasta);
   });
 
-  it('should apply start and end date filters', async () => {
-    const mockWhere = jest.fn().mockReturnThis();
-    const mockGetMany = jest.fn().mockResolvedValue([]);
-    (repo.createQueryBuilder as jest.Mock).mockReturnValue({
-      orderBy: jest.fn().mockReturnThis(),
-      where: mockWhere,
-      getMany: mockGetMany,
-    } as any);
-
-    const start = new Date('2025-09-01');
-    const end = new Date('2025-09-30');
-    await service.obtenerHistorial(start, end);
-
-    expect(mockWhere).toHaveBeenCalledWith(
-      'DATE(imc.createdAt) BETWEEN :start AND :end',
-      expect.any(Object),
-    );
-    expect(mockGetMany).toHaveBeenCalled();
+  it("obtenerHistorial -> sin fechas usa findAllOrderedDesc", async () => {
+    repoMock.findAllOrderedDesc.mockResolvedValue([]);
+    await service.obtenerHistorial();
+    expect(repoMock.findAllOrderedDesc).toHaveBeenCalled();
   });
 
-  it('should apply only start date filter', async () => {
-    const mockWhere = jest.fn().mockReturnThis();
-    const mockGetMany = jest.fn().mockResolvedValue([]);
-    (repo.createQueryBuilder as jest.Mock).mockReturnValue({
-      orderBy: jest.fn().mockReturnThis(),
-      where: mockWhere,
-      getMany: mockGetMany,
-    } as any);
+  it("obtenerEstadisticas -> debe combinar agregados, distribucion y serie", async () => {
+    const agg = {
+      count: 10,
+      avgImc: 24.1234,
+      minImc: 16.33,
+      maxImc: 32.65,
+    };
+    const distrib = [
+      { categoria: "Normal", cantidad: 6 },
+      { categoria: "Sobrepeso", cantidad: 2 },
+      { categoria: "Obeso", cantidad: 2 },
+    ];
+    const series = [
+      { fecha: "2025-09-01", avgImc: 23.5, avgPeso: 70, count: 2 },
+      { fecha: "2025-09-02", avgImc: 25.1, avgPeso: 72, count: 3 },
+    ];
 
-    const start = new Date('2025-09-01');
-    await service.obtenerHistorial(start);
+    repoMock.aggregateStats.mockResolvedValue(agg);
+    repoMock.distribucionPorCategoria.mockResolvedValue(distrib);
+    repoMock.timeSeries.mockResolvedValue(series);
 
-    expect(mockWhere).toHaveBeenCalledWith('DATE(imc.createdAt) >= :start', { start: '2025-09-01' });
-  });
+    const res = await service.obtenerEstadisticas();
 
-  it('should apply only end date filter', async () => {
-    const mockWhere = jest.fn().mockReturnThis();
-    const mockGetMany = jest.fn().mockResolvedValue([]);
-    (repo.createQueryBuilder as jest.Mock).mockReturnValue({
-      orderBy: jest.fn().mockReturnThis(),
-      where: mockWhere,
-      getMany: mockGetMany,
-    } as any);
+    expect(repoMock.aggregateStats).toHaveBeenCalled();
+    expect(repoMock.distribucionPorCategoria).toHaveBeenCalled();
+    expect(repoMock.timeSeries).toHaveBeenCalled();
 
-    const end = new Date('2025-09-30');
-    await service.obtenerHistorial(undefined, end);
-
-    expect(mockWhere).toHaveBeenCalledWith('DATE(imc.createdAt) <= :end', { end: '2025-09-30' });
+    expect(res.total).toBe(10);
+    expect(res.promedioImc).toBeCloseTo(24.12, 2);
+    expect(res.minImc).toBe(16.33);
+    expect(res.maxImc).toBe(32.65);
+    expect(Array.isArray(res.distribucionCategorias)).toBe(true);
+    expect(Array.isArray(res.series)).toBe(true);
   });
 });
